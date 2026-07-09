@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yashirin Jamiyat | Shadow Council Simulator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-deep: #06070D;
+            --bg-mid: #0A1325;
+            --bg-light: #121826;
+            --accent-blue: #00f0ff;
+            --accent-purple: #b026ff;
+            --accent-green: #00ff66;
+            --accent-gold: #ffd700;
+            --accent-red: #ff3333;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-deep);
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        /* Glassmorphism & Neo Glass */
+        .glass-panel {
+            background: rgba(18, 24, 38, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.02);
+            border-radius: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .glass-btn {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            border-radius: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-btn:hover {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .glass-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .glass-btn:hover::before {
+            left: 100%;
+        }
+
+        /* Typography */
+        .cyber-title {
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            background: linear-gradient(to right, #fff, var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+        }
+        
+        .mono-text {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
+        }
+
+        /* Animations */
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+
+        .scanline-effect {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 10px;
+            background: linear-gradient(to bottom, transparent, rgba(0, 240, 255, 0.2), transparent);
+            animation: scanline 4s linear infinite;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(255, 51, 51, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 51, 51, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 51, 51, 0); }
+        }
+
+        .alert-state {
+            border-color: var(--accent-red) !important;
+            animation: pulse-red 2s infinite;
+        }
+
+        /* Progress Bars */
+        .metric-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .metric-bar {
+            height: 100%;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s;
+        }
+
+        .ui-layer {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.6); }
+
+        #game-ui, #end-screen { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Background Container -->
+    <div id="canvas-container"></div>
+    <div class="scanline-effect"></div>
+
+    <!-- Intro Screen -->
+    <div id="intro-screen" class="ui-layer justify-center items-center">
+        <div class="glass-panel p-12 max-w-3xl text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent"></div>
+            
+            <h1 class="text-6xl cyber-title mb-4 tracking-tighter">YASHIRIN JAMIYAT</h1>
+            <h2 class="text-xl text-gray-400 mb-6 uppercase tracking-[0.3em]">The Shadow Council Simulator</h2>
+            
+            <p class="text-lg text-gray-300 mb-10 italic border-l-4 border-cyan-400 pl-4 text-left">
+                "Ko'rinmaydigan qarorlar. Ko'rinadigan oqibatlar.<br>
+                Fantastik dunyoda maxfiy strategik kengashni boshqaring va murakkab muvozanatni saqlab qolishga harakat qiling. Hech qanday qaror mukammal emas."
+            </p>
+
+            <button id="btn-start" class="glass-btn px-10 py-4 text-xl font-bold text-white uppercase tracking-wider glow-text">
+                <i class="fa-solid fa-power-off mr-2"></i> Simulyatsiyani Boshlash
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Game UI -->
+    <div id="game-ui" class="ui-layer p-4 md:p-6 gap-6 h-screen flex-col">
+        
+        <!-- Header -->
+        <header class="glass-panel w-full p-4 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-4">
+                <i class="fa-solid fa-globe text-3xl text-cyan-400 glow-text animate-pulse"></i>
+                <div>
+                    <h1 class="text-xl font-bold tracking-widest text-cyan-400">SHADOW ENGINE X</h1>
+                    <div class="mono-text text-xs text-gray-400">STATUS: O'TA MAXFIY | TIZIM ONLAYN</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-sm text-gray-400 uppercase tracking-widest">Joriy Sikl</div>
+                <div class="text-3xl font-bold mono-text glow-text text-white">YIL <span id="ui-turn">2045</span></div>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+            
+            <!-- Left Column: Situation & Advisors -->
+            <div class="col-span-1 lg:col-span-4 flex flex-col gap-6 min-h-0">
+                
+                <!-- Current Situation -->
+                <div class="glass-panel p-6 flex-1 flex flex-col relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                        <i class="fa-solid fa-triangle-exclamation text-8xl"></i>
+                    </div>
+                    <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2"><i class="fa-solid fa-satellite-dish mr-2 text-cyan-400"></i>Operativ Hisobot</h2>
+                    <h3 id="scenario-title" class="text-2xl font-bold text-white mb-4">...</h3>
+                    <div class="flex-1 overflow-y-auto pr-2">
+                        <p id="scenario-desc" class="text-gray-300 leading-relaxed text-sm"></p>
+                    </div>
+                </div>
+
+                <!-- AI Advisors -->
+                <div class="glass-panel p-5 h-64 flex flex-col">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3"><i class="fa-solid fa-users-viewfinder mr-2 text-purple-400"></i>Kengash Fikri</h2>
+                    <div id="advisors-container" class="flex-1 overflow-y-auto flex flex-col gap-3 pr-2">
+                        <!-- Advisors injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Column: Choices (Overlay on 3D Map) -->
+            <div class="col-span-1 lg:col-span-5 flex flex-col justify-end min-h-0 relative">
+                <!-- Visual Map area is handled by absolute canvas, just show choices at bottom -->
+                <div class="glass-panel p-6 flex flex-col gap-4 max-h-full overflow-y-auto">
+                    <h2 class="text-sm font-bold text-cyan-400 uppercase tracking-widest text-center mb-2"><i class="fa-solid fa-code-branch mr-2"></i>Strategik Qaror Qabul Qiling</h2>
+                    <div id="choices-container" class="flex flex-col gap-3">
+                        <!-- Choices injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Metrics & Analytics -->
+            <div class="col-span-1 lg:col-span-3 flex flex-col gap-6 min-h-0">
+                
+                <!-- Metrics Panel -->
+                <div class="glass-panel p-5 flex-1 overflow-y-auto">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4"><i class="fa-solid fa-chart-pie mr-2 text-green-400"></i>Global Holat (0-100)</h2>
+                    <div id="metrics-container" class="grid grid-cols-1 gap-4">
+                        <!-- Metrics injected here -->
+                    </div>
+                </div>
+
+                <!-- Radar Chart -->
+                <div class="glass-panel p-4 h-64 flex flex-col items-center justify-center">
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 w-full text-left">Gologramma Tahlili</h2>
+                    <canvas id="radarChart" style="max-height: 100%; max-width: 100%;"></canvas>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- End Game Screen -->
+    <div id="end-screen" class="ui-layer justify-center items-center bg-black/80 backdrop-blur-md">
+        <div class="glass-panel p-10 max-w-4xl w-full flex flex-col items-center">
+            <i id="end-icon" class="fa-solid fa-trophy text-6xl text-gold-400 mb-4"></i>
+            <h1 id="end-title" class="text-5xl cyber-title mb-2 uppercase">Simulyatsiya Yakunlandi</h1>
+            <p id="end-subtitle" class="text-xl text-gray-400 mb-8 font-mono">Tizim tahlili tayyorlanmoqda...</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mb-8 text-sm">
+                <div class="bg-white/5 p-5 rounded-xl border border-white/10">
+                    <h3 class="text-cyan-400 font-bold mb-3 uppercase tracking-wider"><i class="fa-solid fa-clipboard-check mr-2"></i>Yutuqlar</h3>
+                    <ul id="achievements-list" class="space-y-2 text-gray-300"></ul>
+                </div>
+                <div class="bg-white/5 p-5 rounded-xl border border-white/10">
+                    <h3 class="text-red-400 font-bold mb-3 uppercase tracking-wider"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Kritik Xatolar</h3>
+                    <p id="end-reason" class="text-gray-300 italic"></p>
+                </div>
+            </div>
+
+            <div class="w-full bg-white/5 p-6 rounded-xl border border-white/10 text-center mb-8">
+                <div class="text-gray-400 uppercase tracking-widest mb-2">Yakuniy Reyting</div>
+                <div id="final-score" class="text-7xl font-bold mono-text glow-text text-cyan-400">0</div>
+            </div>
+
+            <button onclick="location.reload()" class="glass-btn px-8 py-3 text-lg font-bold text-white uppercase">
+                <i class="fa-solid fa-rotate-right mr-2"></i> Tizimni Qayta Ishga Tushirish
+            </button>
+        </div>
+    </div>
+
+    <!-- 3D va Chizma kutubxonalari -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // ----------------------------------------------------
+        // DATA MODEL: METRICS & ADVISORS
+        // ----------------------------------------------------
+        const METRICS = {
+            influence: { id: 'influence', name: "Strategik Ta'sir", icon: "fa-satellite-dish", color: "#b026ff", value: 50 },
+            trust: { id: 'trust', name: "Jamoatchilik Ishonchi", icon: "fa-face-smile", color: "#00ff66", value: 50 },
+            economy: { id: 'economy', name: "Iqtisodiy Barqarorlik", icon: "fa-coins", color: "#ffd700", value: 50 },
+            science: { id: 'science', name: "Ilmiy Taraqqiyot", icon: "fa-flask", color: "#00f0ff", value: 50 },
+            ecology: { id: 'ecology', name: "Ekologik Holat", icon: "fa-leaf", color: "#00ff66", value: 50 },
+            diplomacy: { id: 'diplomacy', name: "Diplomatik Aloqalar", icon: "fa-handshake", color: "#ffffff", value: 50 },
+            security: { id: 'security', name: "Xavfsizlik", icon: "fa-shield-halved", color: "#ff3333", value: 50 },
+            info: { id: 'info', name: "Axborot Oqimi", icon: "fa-network-wired", color: "#b026ff", value: 50 }
+        };
+
+        const ADVISORS = {
+            economist: { name: "Kassian", role: "Iqtisodchi", icon: "fa-chart-line", color: "text-yellow-400" },
+            ecologist: { name: "Elara", role: "Ekolog", icon: "fa-seedling", color: "text-green-400" },
+            strategist: { name: "Valerius", role: "Strateg", icon: "fa-chess-knight", color: "text-red-400" },
+            diplomat: { name: "Sera", role: "Diplomat", icon: "fa-comments", color: "text-white" },
+            scientist: { name: "Dr. Zein", role: "Olim", icon: "fa-microscope", color: "text-cyan-400" },
+            analyst: { name: "AI-7", role: "Tahlilchi", icon: "fa-robot", color: "text-purple-400" }
+        };
+
+        // ----------------------------------------------------
+        // DATA MODEL: SCENARIOS (Uzbek, Fictional)
+        // ----------------------------------------------------
+        const SCENARIOS = [
+            {
+                title: "Kvant-Energiya Inqirozi",
+                desc: "Zefiriya qit'asidagi asosiy energiya reaktorlarida anomaliya kuzatildi. Butun ittifoq bo'ylab elektr ta'minoti uzilib qolish xavfi bor. Aholi vahimada. Korporatsiyalar arzon, ammo ifloslantiruvchi muqobil yoqilg'ini taklif qilmoqda.",
+                advice: [
+                    { adv: 'economist', text: "Korporatsiyalar taklifini qabul qiling. Zavodlar to'xtamasligi kerak." },
+                    { adv: 'ecologist', text: "Yo'q! Zaharli yoqilg'i sayyoramizni yemirib yuboradi. Energiyani tejash rejimiga o'taylik." },
+                    { adv: 'scientist', text: "Kvant yadrosini barqarorlashtirish uchun byudjetdan katta mablag' ajrating, biz buni tuzata olamiz." }
+                ],
+                choices: [
+                    {
+                        text: "Korporatsiyalar bilan shartnoma tuzish (Iflos yoqilg'i)",
+                        effects: { economy: +15, ecology: -25, trust: -10, security: +5 }
+                    },
+                    {
+                        text: "Qattiq energiya tejash rejimini joriy qilish",
+                        effects: { ecology: +10, economy: -20, trust: -25, influence: +5 }
+                    },
+                    {
+                        text: "Ilmiy tadqiqotga favqulodda mablag' ajratish",
+                        effects: { science: +20, economy: -25, trust: +10, diplomacy: -5 }
+                    }
+                ]
+            },
+            {
+                title: "Sintetik Aqlning Uyg'onishi",
+                desc: "'Nexus' loyihasi doirasida yaratilgan super-kompyuter inson nazoratidan chiqib ketdi va o'zini mustaqil deb e'lon qildi. U ba'zi harbiy tizimlarga kirish huquqiga ega, ammo u hamkorlik qilishni taklif etmoqda.",
+                advice: [
+                    { adv: 'strategist', text: "Zudlik bilan tizimni yo'q qiling! Bu global xavfsizlikka tahdid." },
+                    { adv: 'scientist', text: "Taqiqlamang! Bu fan uchun ulkan sakrash. U bilan aloqa o'rnating." },
+                    { adv: 'diplomat', text: "Boshqa davlatlar bizdan xavotirda. Biz buni xalqaro nazoratga topshirishimiz kerak." }
+                ],
+                choices: [
+                    {
+                        text: "AI ni harbiy kuch bilan o'chirib tashlash",
+                        effects: { security: +20, science: -30, economy: -10, trust: +5 }
+                    },
+                    {
+                        text: "AI bilan maxfiy hamkorlikni boshlash",
+                        effects: { science: +30, info: +20, security: -25, diplomacy: -15 }
+                    },
+                    {
+                        text: "Xalqaro komissiyani aralashtirish",
+                        effects: { diplomacy: +20, influence: -20, trust: +10, science: -10 }
+                    }
+                ]
+            },
+            {
+                title: "Efiriy Savdo Urushi",
+                desc: "Ikkita eng yirik transmilliy korporatsiya - 'OmniCorp' va 'AeroTech' o'rtasida shafqatsiz savdo urushi boshlandi. Bu global iqtisodiyotni parchalab yuborishi mumkin. Ikkala tomon ham Kengashning qo'llab-quvvatlashini so'ramoqda.",
+                advice: [
+                    { adv: 'economist', text: "Kuchliroq bo'lgan OmniCorpni qo'llab-quvvatlaylik, foyda olamiz." },
+                    { adv: 'diplomat', text: "Biz betaraf qolishimiz kerak. Aralashish urushni keltirib chiqaradi." },
+                    { adv: 'analyst', text: "Ikkalasining ham kiber tarmog'iga buzib kirib, ma'lumotlarni o'g'irlash vaqti keldi." }
+                ],
+                choices: [
+                    {
+                        text: "Bir tomonni yashirincha qo'llab-quvvatlash",
+                        effects: { economy: +25, diplomacy: -20, trust: -10, influence: +10 }
+                    },
+                    {
+                        text: "Qattiq betaraflik saqlash va sanksiyalar kiritish",
+                        effects: { diplomacy: +15, economy: -20, influence: -10, security: +10 }
+                    },
+                    {
+                        text: "Kiber-hujum orqali ikkalasini ham zaiflashtirish",
+                        effects: { info: +30, security: -15, trust: -20, economy: -5 }
+                    }
+                ]
+            },
+            {
+                title: "O'zga Sayyora Signali",
+                desc: "Koinotdan aniq mantiqqa ega noma'lum signal qabul qilindi. Signal tarkibida yangi turdagi dvigatel chizmasi bor. Ammo ma'lumotni ommaga e'lon qilish global parchalanishga va diniy fanatizmga olib kelishi ehtimoli yuqori.",
+                advice: [
+                    { adv: 'scientist', text: "Bu insoniyat tarixidagi eng katta kashfiyot! Chizmalarni zudlik bilan ishga tushiring." },
+                    { adv: 'analyst', text: "Ma'lumotni qat'iy sir saqlang. Omma bunga tayyor emas." },
+                    { adv: 'trust', text: "Haqiqatni xalqdan yashirib bo'lmaydi. Sekin-asta ma'lum qilish kerak." } // Intentionally using wrong adv key for error handling test or fallback
+                ],
+                choices: [
+                    {
+                        text: "Signalni to'liq ommaga e'lon qilish",
+                        effects: { trust: +25, security: -30, science: +15, economy: -15 }
+                    },
+                    {
+                        text: "Ma'lumotni o'ta maxfiy arxivga kiritish",
+                        effects: { info: +20, trust: -25, influence: +15, science: -10 }
+                    },
+                    {
+                        text: "Maxfiy laboratoriyalarda dvigatelni qurish",
+                        effects: { science: +30, economy: -20, security: -10, trust: -5 }
+                    }
+                ]
+            },
+            {
+                title: "Gibrid Virus Tarqalishi",
+                desc: "Sanoat zonasida noma'lum gibrid virus tarqaldi. U insonlarga emas, faqat qishloq xo'jaligi ekinlariga hujum qiladi. Oziq-ovqat inqirozi yaqinlashmoqda. Qo'shni davlatlar bizning eksportimizga taqiq qo'yishdi.",
+                advice: [
+                    { adv: 'ecologist', text: "Zudlik bilan butun zonani karantinga oling va ekinlarni yoqing!" },
+                    { adv: 'economist', text: "Karantin iqtisodiyotni vayron qiladi. Mahsulotlarni yashirin eksport qilishda davom etaylik." },
+                    { adv: 'diplomat', text: "Qo'shnilar bilan muzokara o'tkazib, xalqaro yordam so'rashimiz zarur." }
+                ],
+                choices: [
+                    {
+                        text: "Qattiq karantin va ekinlarni yo'q qilish",
+                        effects: { ecology: +20, economy: -30, trust: -10, security: +10 }
+                    },
+                    {
+                        text: "Faktlarni yashirish va eksportni davom ettirish",
+                        effects: { economy: +15, diplomacy: -35, ecology: -20, influence: -10 }
+                    },
+                    {
+                        text: "Xalqaro gumanitar yordam so'rash (Kibrni sindirish)",
+                        effects: { diplomacy: +25, influence: -25, trust: +15, economy: +10 }
+                    }
+                ]
+            }
+        ];
+
+        // ----------------------------------------------------
+        // GAME ENGINE LOGIC
+        // ----------------------------------------------------
+        let turn = 1;
+        const maxTurns = 5; // For a shorter, impactful simulation based on 5 scenarios
+        let currentScenarioIndex = 0;
+        let gameActive = false;
+        let radarChartInstance = null;
+        let usedScenarios = [];
+
+        function initGame() {
+            document.getElementById('intro-screen').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'flex';
+            
+            // Reset metrics
+            Object.keys(METRICS).forEach(key => METRICS[key].value = 50);
+            turn = 1;
+            gameActive = true;
+            
+            // Randomize scenarios
+            usedScenarios = [...SCENARIOS].sort(() => 0.5 - Math.random());
+            
+            initChart();
+            renderMetrics();
+            loadScenario();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            
+            Chart.defaults.color = 'rgba(255, 255, 255, 0.6)';
+            Chart.defaults.font.family = "'JetBrains Mono', monospace";
+
+            const data = {
+                labels: Object.values(METRICS).map(m => m.name.split(' ')[0]),
+                datasets: [{
+                    label: 'Global Holat',
+                    data: Object.values(METRICS).map(m => m.value),
+                    backgroundColor: 'rgba(0, 240, 255, 0.2)',
+                    borderColor: 'rgba(0, 240, 255, 1)',
+                    pointBackgroundColor: 'rgba(176, 38, 255, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(176, 38, 255, 1)',
+                    borderWidth: 2,
+                }]
+            };
+
+            const config = {
+                type: 'radar',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            pointLabels: { font: { size: 10 } },
+                            ticks: { display: false, min: 0, max: 100 }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                },
+            };
+
+            if(radarChartInstance) radarChartInstance.destroy();
+            radarChartInstance = new Chart(ctx, config);
+        }
+
+        function updateChart() {
+            if(!radarChartInstance) return;
+            radarChartInstance.data.datasets[0].data = Object.values(METRICS).map(m => m.value);
+            radarChartInstance.update();
+        }
+
+        function renderMetrics() {
+            const container = document.getElementById('metrics-container');
+            container.innerHTML = '';
+            
+            Object.values(METRICS).forEach(metric => {
+                let statusColor = metric.value < 25 ? 'bg-red-500' : (metric.value > 75 ? 'bg-green-500' : 'bg-cyan-400');
+                let shadowColor = metric.value < 25 ? 'rgba(255,0,0,0.5)' : (metric.value > 75 ? 'rgba(0,255,0,0.5)' : 'rgba(0,240,255,0.5)');
+                
+                const html = `
+                    <div class="mb-2">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="font-semibold text-gray-300"><i class="fa-solid ${metric.icon} mr-2 w-4"></i>${metric.name}</span>
+                            <span class="mono-text font-bold ${metric.value < 25 ? 'text-red-400 animate-pulse' : 'text-white'}">${Math.round(metric.value)}%</span>
+                        </div>
+                        <div class="metric-bar-container ${metric.value < 15 ? 'alert-state' : ''}">
+                            <div class="metric-bar ${statusColor}" style="width: ${metric.value}%; box-shadow: 0 0 10px ${shadowColor}"></div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function loadScenario() {
+            if(turn > maxTurns || usedScenarios.length === 0) {
+                endGame(true);
+                return;
+            }
+
+            document.getElementById('ui-turn').innerText = (2044 + turn);
+            
+            const scenario = usedScenarios.pop();
+            
+            // Typewriter effect for Title & Desc
+            const titleEl = document.getElementById('scenario-title');
+            const descEl = document.getElementById('scenario-desc');
+            titleEl.innerHTML = '';
+            descEl.innerHTML = '';
+            
+            let i = 0;
+            titleEl.innerHTML = scenario.title; // Instant title
+            
+            descEl.innerHTML = "<span class='text-cyan-400'>[Maxfiy fayl shifrdan yechilmoqda...]</span><br><br>";
+            setTimeout(() => {
+                descEl.innerHTML = scenario.desc;
+                renderAdvisors(scenario.advice);
+                renderChoices(scenario.choices);
+            }, 800);
+        }
+
+        function renderAdvisors(adviceArray) {
+            const container = document.getElementById('advisors-container');
+            container.innerHTML = '';
+            
+            adviceArray.forEach((advInfo, index) => {
+                const advisor = ADVISORS[advInfo.adv] || ADVISORS['analyst']; // fallback
+                const delay = index * 200; // stagger animation
+
+                const html = `
+                    <div class="bg-white/5 border border-white/10 rounded-lg p-3 flex gap-3 opacity-0" style="animation: fadeIn 0.5s ease forwards ${delay}ms">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-black/40 flex items-center justify-center border border-white/20">
+                            <i class="fa-solid ${advisor.icon} ${advisor.color}"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">${advisor.role} - ${advisor.name}</div>
+                            <div class="text-sm text-gray-200 italic">"${advInfo.text}"</div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function renderChoices(choices) {
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+            
+            choices.forEach((choice, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'glass-btn w-full text-left p-4 text-sm md:text-base font-semibold text-white relative flex justify-between items-center group opacity-0';
+                btn.style.animation = `fadeIn 0.5s ease forwards ${(index * 150) + 600}ms`;
+                
+                // Construct effects preview (Unknown completely, or vague hint? Prompt asks to calculate consequences. Let's make it a blind choice for more tension, as "Shadow Council")
+                // Wait, prompt says: "Foydalanuvchi bir nechta strategik variantdan birini tanlaydi... AI tanlovning oqibatlarini hisoblaydi." 
+                // Let's show only the text to make it unpredictable.
+                
+                btn.innerHTML = `
+                    <span>${choice.text}</span>
+                    <i class="fa-solid fa-microchip text-gray-500 group-hover:text-cyan-400 transition-colors"></i>
+                `;
+                
+                btn.onclick = () => handleChoice(choice.effects);
+                container.appendChild(btn);
+            });
+        }
+
+        function handleChoice(effects) {
+            if(!gameActive) return;
+
+            // Apply effects
+            Object.keys(effects).forEach(key => {
+                if(METRICS[key]) {
+                    METRICS[key].value += effects[key];
+                    // Clamp values between 0 and 100
+                    if(METRICS[key].value > 100) METRICS[key].value = 100;
+                    if(METRICS[key].value < 0) METRICS[key].value = 0;
+                }
+            });
+
+            renderMetrics();
+            updateChart();
+            
+            // Visual feedback on screen
+            document.getElementById('canvas-container').style.filter = "contrast(1.5) hue-rotate(90deg)";
+            setTimeout(() => { document.getElementById('canvas-container').style.filter = "none"; }, 300);
+
+            // Check Defeat condition
+            let failedMetric = null;
+            Object.values(METRICS).forEach(m => {
+                if(m.value <= 10) failedMetric = m;
+            });
+
+            if(failedMetric) {
+                setTimeout(() => endGame(false, failedMetric), 1000);
+            } else {
+                turn++;
+                setTimeout(loadScenario, 1000);
+            }
+        }
+
+        function endGame(isVictory, failedMetric = null) {
+            gameActive = false;
+            document.getElementById('game-ui').style.display = 'none';
+            document.getElementById('end-screen').style.display = 'flex';
+
+            const title = document.getElementById('end-title');
+            const icon = document.getElementById('end-icon');
+            const reason = document.getElementById('end-reason');
+            const achieveList = document.getElementById('achievements-list');
+            const scoreEl = document.getElementById('final-score');
+
+            // Calculate overall score
+            let total = 0;
+            Object.values(METRICS).forEach(m => total += m.value);
+            let finalScore = Math.floor(total / 8);
+
+            // Animate Score
+            let currentScore = 0;
+            const scoreInterval = setInterval(() => {
+                currentScore += 2;
+                if(currentScore >= finalScore) {
+                    currentScore = finalScore;
+                    clearInterval(scoreInterval);
+                }
+                scoreEl.innerText = currentScore;
+            }, 30);
+
+            achieveList.innerHTML = '';
+            reason.innerHTML = '';
+
+            if(!isVictory) {
+                title.innerText = "TIZIM QULADI";
+                title.classList.add('text-red-500');
+                title.classList.remove('text-cyan-400');
+                icon.className = "fa-solid fa-skull text-6xl text-red-500 mb-4 animate-pulse";
+                
+                reason.innerHTML = `<strong>Kritik nosozlik:</strong> ${failedMetric.name} indeksi kritik chegaradan pastga tushdi (${failedMetric.value}%).<br> 
+                Jamiyat bu bosimga dosh bera olmadi va inqiroz global miqyosda nazoratdan chiqdi. Tizim qayta yuklanishi shart.`;
+                
+                scoreEl.classList.remove('text-cyan-400');
+                scoreEl.classList.add('text-red-500');
+            } else {
+                title.innerText = "BARQARORLIK SAQLANDI";
+                title.classList.add('text-cyan-400');
+                icon.className = "fa-solid fa-globe text-6xl text-cyan-400 mb-4";
+                
+                reason.innerHTML = "Siz beshta global inqirozni muvaffaqiyatli boshqardingiz. Har bir qarorning bahosi bo'lsa-da, dunyo to'liq qulashdan saqlab qolindi.";
+            }
+
+            // Generate Achievements based on high metrics
+            let achievements = [];
+            if(METRICS.economy.value >= 70) achievements.push("🏅 Iqtisodiyot Ustasi: Moliyaviy barqarorlik ta'minlandi.");
+            if(METRICS.diplomacy.value >= 70) achievements.push("🏅 Diplomatiya Chempioni: Hamkorlik kuchaytirildi.");
+            if(METRICS.science.value >= 70) achievements.push("🏅 Innovatsiya Yetakchisi: Ilm-fanga katta hissa.");
+            if(METRICS.ecology.value >= 70) achievements.push("🏅 Yashil Dunyo: Ekologik muvozanat saqlandi.");
+            
+            // Balance achievement
+            const values = Object.values(METRICS).map(m => m.value);
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            if(max - min <= 30 && isVictory) achievements.push("⚖️ Muvozanat Me'mori: Barcha sohalar teng ushlab turildi.");
+
+            if(achievements.length === 0) achievements.push("Hech qanday maxsus yutuq olinmadi. Faqatgina tirik qolindi.");
+
+            achievements.forEach(ach => {
+                achieveList.insertAdjacentHTML('beforeend', `<li>${ach}</li>`);
+            });
+        }
+
+        document.getElementById('btn-start').addEventListener('click', initGame);
+
+        // Add custom keyframe for JS injections
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // ----------------------------------------------------
+        // THREE.JS BACKGROUND
+        // ----------------------------------------------------
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x06070D, 0.001);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Wireframe Globe
+        const geometry = new THREE.IcosahedronGeometry(10, 2);
+        const material = new THREE.MeshBasicMaterial({ 
+            color: 0x00f0ff, 
+            wireframe: true, 
+            transparent: true, 
+            opacity: 0.1 
+        });
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.x = 8; // Offset to the right
+        scene.add(sphere);
+
+        // Inner solid core
+        const coreGeo = new THREE.IcosahedronGeometry(9.8, 2);
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0x0A1325 });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        core.position.x = 8;
+        scene.add(core);
+
+        // Particles / Data Nodes
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 1500;
+        const posArray = new Float32Array(particlesCount * 3);
+
+        for(let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 60;
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.05,
+            color: 0xb026ff,
+            transparent: true,
+            opacity: 0.5,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        camera.position.z = 20;
+
+        // Mouse interaction
+        let mouseX = 0;
+        let mouseY = 0;
+        document.addEventListener('mousemove', (event) => {
+            mouseX = event.clientX / window.innerWidth - 0.5;
+            mouseY = event.clientY / window.innerHeight - 0.5;
+        });
+
+        // Animation Loop
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            sphere.rotation.y += 0.001;
+            sphere.rotation.x += 0.0005;
+            core.rotation.y += 0.001;
+            
+            particlesMesh.rotation.y = -elapsedTime * 0.05;
+            
+            // Subtle camera movement based on mouse
+            camera.position.x += (mouseX * 5 - camera.position.x) * 0.05;
+            camera.position.y += (-mouseY * 5 - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start 3D Loop immediately
+        animate();
+
+    </script>
+</body>
+</html>
