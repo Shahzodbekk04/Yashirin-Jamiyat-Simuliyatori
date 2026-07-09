@@ -70,16 +70,19 @@
             transform: translateY(-2px);
         }
 
-        .glass-btn::before {
-            content: '';
-            position: absolute;
-            top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
+        .lang-btn {
+            background: rgba(18, 24, 38, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
         }
-
-        .glass-btn:hover::before {
-            left: 100%;
+        .lang-btn:hover, .lang-btn.active {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
         }
 
         /* Typography */
@@ -156,7 +159,7 @@
         ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.3); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.6); }
 
-        #game-ui, #end-screen { display: none; }
+        #game-ui, #end-screen, #info-modal { display: none; }
     </style>
 </head>
 <body>
@@ -165,22 +168,55 @@
     <div id="canvas-container"></div>
     <div class="scanline-effect"></div>
 
+    <!-- Language Switcher -->
+    <div class="absolute top-6 right-6 z-50 flex gap-3 backdrop-blur-md">
+        <button class="lang-btn active" onclick="setLanguage('uz')" id="btn-lang-uz">UZ</button>
+        <button class="lang-btn" onclick="setLanguage('ru')" id="btn-lang-ru">RU</button>
+        <button class="lang-btn" onclick="setLanguage('en')" id="btn-lang-en">EN</button>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="info-modal" class="fixed inset-0 z-[100] flex justify-center items-center bg-black/60 backdrop-blur-sm">
+        <div class="glass-panel p-8 max-w-2xl w-full mx-4 border-cyan-400/50 shadow-[0_0_30px_rgba(0,240,255,0.2)]">
+            <h2 id="info-title" class="text-3xl cyber-title mb-4 border-b border-white/10 pb-4"></h2>
+            
+            <div class="mb-6">
+                <h3 id="info-about-title" class="text-cyan-400 font-bold mb-2 uppercase tracking-wider text-sm"><i class="fa-solid fa-crosshairs mr-2"></i></h3>
+                <p id="info-about-text" class="text-gray-300 leading-relaxed text-sm"></p>
+            </div>
+
+            <div class="mb-8">
+                <h3 id="info-how-title" class="text-purple-400 font-bold mb-2 uppercase tracking-wider text-sm"><i class="fa-solid fa-gamepad mr-2"></i></h3>
+                <ul id="info-how-text" class="text-gray-300 leading-relaxed text-sm space-y-2 list-disc list-inside"></ul>
+            </div>
+
+            <div class="text-right">
+                <button onclick="toggleInfo(false)" class="glass-btn px-6 py-2 text-white font-bold hover:text-cyan-400">
+                    <i class="fa-solid fa-xmark mr-2"></i> <span id="btn-close-info">Yopish</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Intro Screen -->
     <div id="intro-screen" class="ui-layer justify-center items-center">
-        <div class="glass-panel p-12 max-w-3xl text-center relative overflow-hidden">
+        <div class="glass-panel p-12 max-w-3xl text-center relative overflow-hidden mx-4">
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent"></div>
             
-            <h1 class="text-6xl cyber-title mb-4 tracking-tighter">YASHIRIN JAMIYAT</h1>
-            <h2 class="text-xl text-gray-400 mb-6 uppercase tracking-[0.3em]">The Shadow Council Simulator</h2>
+            <h1 id="intro-title" class="text-5xl md:text-6xl cyber-title mb-4 tracking-tighter">YASHIRIN JAMIYAT</h1>
+            <h2 id="intro-subtitle" class="text-lg md:text-xl text-gray-400 mb-6 uppercase tracking-[0.3em]">The Shadow Council Simulator</h2>
             
-            <p class="text-lg text-gray-300 mb-10 italic border-l-4 border-cyan-400 pl-4 text-left">
-                "Ko'rinmaydigan qarorlar. Ko'rinadigan oqibatlar.<br>
-                Fantastik dunyoda maxfiy strategik kengashni boshqaring va murakkab muvozanatni saqlab qolishga harakat qiling. Hech qanday qaror mukammal emas."
+            <p id="intro-quote" class="text-sm md:text-lg text-gray-300 mb-10 italic border-l-4 border-cyan-400 pl-4 text-left">
             </p>
 
-            <button id="btn-start" class="glass-btn px-10 py-4 text-xl font-bold text-white uppercase tracking-wider glow-text">
-                <i class="fa-solid fa-power-off mr-2"></i> Simulyatsiyani Boshlash
-            </button>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <button onclick="initGame()" class="glass-btn px-8 py-4 text-lg font-bold text-white uppercase tracking-wider glow-text border-cyan-400/50">
+                    <i class="fa-solid fa-power-off mr-2"></i> <span id="btn-start">Simulyatsiyani Boshlash</span>
+                </button>
+                <button onclick="toggleInfo(true)" class="glass-btn px-6 py-4 text-sm font-bold text-gray-300 uppercase tracking-wider">
+                    <i class="fa-solid fa-circle-info mr-2"></i> <span id="btn-info">O'yin Haqida</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -193,12 +229,12 @@
                 <i class="fa-solid fa-globe text-3xl text-cyan-400 glow-text animate-pulse"></i>
                 <div>
                     <h1 class="text-xl font-bold tracking-widest text-cyan-400">SHADOW ENGINE X</h1>
-                    <div class="mono-text text-xs text-gray-400">STATUS: O'TA MAXFIY | TIZIM ONLAYN</div>
+                    <div id="header-status" class="mono-text text-xs text-gray-400">STATUS: O'TA MAXFIY | TIZIM ONLAYN</div>
                 </div>
             </div>
             <div class="text-right">
-                <div class="text-sm text-gray-400 uppercase tracking-widest">Joriy Sikl</div>
-                <div class="text-3xl font-bold mono-text glow-text text-white">YIL <span id="ui-turn">2045</span></div>
+                <div id="header-turn-label" class="text-sm text-gray-400 uppercase tracking-widest">Joriy Sikl</div>
+                <div class="text-3xl font-bold mono-text glow-text text-white"><span id="header-year-label">YIL</span> <span id="ui-turn">2045</span></div>
             </div>
         </header>
 
@@ -213,7 +249,7 @@
                     <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                         <i class="fa-solid fa-triangle-exclamation text-8xl"></i>
                     </div>
-                    <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2"><i class="fa-solid fa-satellite-dish mr-2 text-cyan-400"></i>Operativ Hisobot</h2>
+                    <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2"><i class="fa-solid fa-satellite-dish mr-2 text-cyan-400"></i><span id="ui-op-report">Operativ Hisobot</span></h2>
                     <h3 id="scenario-title" class="text-2xl font-bold text-white mb-4">...</h3>
                     <div class="flex-1 overflow-y-auto pr-2">
                         <p id="scenario-desc" class="text-gray-300 leading-relaxed text-sm"></p>
@@ -222,7 +258,7 @@
 
                 <!-- AI Advisors -->
                 <div class="glass-panel p-5 h-64 flex flex-col">
-                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3"><i class="fa-solid fa-users-viewfinder mr-2 text-purple-400"></i>Kengash Fikri</h2>
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3"><i class="fa-solid fa-users-viewfinder mr-2 text-purple-400"></i><span id="ui-council">Kengash Fikri</span></h2>
                     <div id="advisors-container" class="flex-1 overflow-y-auto flex flex-col gap-3 pr-2">
                         <!-- Advisors injected here -->
                     </div>
@@ -231,9 +267,8 @@
 
             <!-- Center Column: Choices (Overlay on 3D Map) -->
             <div class="col-span-1 lg:col-span-5 flex flex-col justify-end min-h-0 relative">
-                <!-- Visual Map area is handled by absolute canvas, just show choices at bottom -->
                 <div class="glass-panel p-6 flex flex-col gap-4 max-h-full overflow-y-auto">
-                    <h2 class="text-sm font-bold text-cyan-400 uppercase tracking-widest text-center mb-2"><i class="fa-solid fa-code-branch mr-2"></i>Strategik Qaror Qabul Qiling</h2>
+                    <h2 class="text-sm font-bold text-cyan-400 uppercase tracking-widest text-center mb-2"><i class="fa-solid fa-code-branch mr-2"></i><span id="ui-decision">Strategik Qaror Qabul Qiling</span></h2>
                     <div id="choices-container" class="flex flex-col gap-3">
                         <!-- Choices injected here -->
                     </div>
@@ -245,7 +280,7 @@
                 
                 <!-- Metrics Panel -->
                 <div class="glass-panel p-5 flex-1 overflow-y-auto">
-                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4"><i class="fa-solid fa-chart-pie mr-2 text-green-400"></i>Global Holat (0-100)</h2>
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4"><i class="fa-solid fa-chart-pie mr-2 text-green-400"></i><span id="ui-global">Global Holat (0-100)</span></h2>
                     <div id="metrics-container" class="grid grid-cols-1 gap-4">
                         <!-- Metrics injected here -->
                     </div>
@@ -253,7 +288,7 @@
 
                 <!-- Radar Chart -->
                 <div class="glass-panel p-4 h-64 flex flex-col items-center justify-center">
-                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 w-full text-left">Gologramma Tahlili</h2>
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 w-full text-left"><span id="ui-radar">Gologramma Tahlili</span></h2>
                     <canvas id="radarChart" style="max-height: 100%; max-width: 100%;"></canvas>
                 </div>
 
@@ -263,191 +298,374 @@
 
     <!-- End Game Screen -->
     <div id="end-screen" class="ui-layer justify-center items-center bg-black/80 backdrop-blur-md">
-        <div class="glass-panel p-10 max-w-4xl w-full flex flex-col items-center">
+        <div class="glass-panel p-10 max-w-4xl w-full flex flex-col items-center mx-4">
             <i id="end-icon" class="fa-solid fa-trophy text-6xl text-gold-400 mb-4"></i>
-            <h1 id="end-title" class="text-5xl cyber-title mb-2 uppercase">Simulyatsiya Yakunlandi</h1>
-            <p id="end-subtitle" class="text-xl text-gray-400 mb-8 font-mono">Tizim tahlili tayyorlanmoqda...</p>
+            <h1 id="end-title" class="text-4xl md:text-5xl cyber-title mb-2 uppercase text-center">Simulyatsiya Yakunlandi</h1>
+            <p id="end-subtitle" class="text-lg md:text-xl text-gray-400 mb-8 font-mono text-center">Tizim tahlili tayyorlanmoqda...</p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mb-8 text-sm">
                 <div class="bg-white/5 p-5 rounded-xl border border-white/10">
-                    <h3 class="text-cyan-400 font-bold mb-3 uppercase tracking-wider"><i class="fa-solid fa-clipboard-check mr-2"></i>Yutuqlar</h3>
+                    <h3 class="text-cyan-400 font-bold mb-3 uppercase tracking-wider"><i class="fa-solid fa-clipboard-check mr-2"></i><span id="end-achiev-title">Yutuqlar</span></h3>
                     <ul id="achievements-list" class="space-y-2 text-gray-300"></ul>
                 </div>
                 <div class="bg-white/5 p-5 rounded-xl border border-white/10">
-                    <h3 class="text-red-400 font-bold mb-3 uppercase tracking-wider"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Kritik Xatolar</h3>
+                    <h3 class="text-red-400 font-bold mb-3 uppercase tracking-wider"><i class="fa-solid fa-triangle-exclamation mr-2"></i><span id="end-error-title">Kritik Xatolar</span></h3>
                     <p id="end-reason" class="text-gray-300 italic"></p>
                 </div>
             </div>
 
             <div class="w-full bg-white/5 p-6 rounded-xl border border-white/10 text-center mb-8">
-                <div class="text-gray-400 uppercase tracking-widest mb-2">Yakuniy Reyting</div>
+                <div id="end-rating-title" class="text-gray-400 uppercase tracking-widest mb-2">Yakuniy Reyting</div>
                 <div id="final-score" class="text-7xl font-bold mono-text glow-text text-cyan-400">0</div>
             </div>
 
-            <button onclick="location.reload()" class="glass-btn px-8 py-3 text-lg font-bold text-white uppercase">
-                <i class="fa-solid fa-rotate-right mr-2"></i> Tizimni Qayta Ishga Tushirish
+            <button onclick="location.reload()" class="glass-btn px-8 py-3 text-lg font-bold text-white uppercase border-cyan-400/50">
+                <i class="fa-solid fa-rotate-right mr-2"></i> <span id="btn-restart">Tizimni Qayta Ishga Tushirish</span>
             </button>
         </div>
     </div>
 
-    <!-- 3D va Chizma kutubxonalari -->
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-        // ----------------------------------------------------
-        // DATA MODEL: METRICS & ADVISORS
-        // ----------------------------------------------------
+        let currentLang = 'uz';
+
+        const I18N = {
+            uz: {
+                // Intro
+                title: "YASHIRIN JAMIYAT",
+                subtitle: "The Shadow Council Simulator",
+                quote: `"Ko'rinmaydigan qarorlar. Ko'rinadigan oqibatlar.<br>Fantastik dunyoda maxfiy strategik kengashni boshqaring va murakkab muvozanatni saqlab qolishga harakat qiling."`,
+                btnStart: "Simulyatsiyani Boshlash",
+                btnInfo: "O'yin Haqida",
+                // Info Modal
+                infoTitle: "Tizim Ma'lumotnomasi",
+                infoAboutTitle: "Asosiy Maqsad",
+                infoAboutText: "Siz Shadow Engine X — global yashirin kengashni boshqaruvchi sun'iy intellektsiz. Sening vazifang xayoliy geosiyosiy dunyoda inqirozlarni boshqarish va tamaddunni halokatdan asrab qolishdir. Har bir qarorning narxi bor va mukammal tanlov yo'q.",
+                infoHowTitle: "Qanday O'ynaladi?",
+                infoHowText: [
+                    "Har bir siklda (yilda) global muammo yuzaga keladi.",
+                    "Maslahatchilaringiz turli sohalar bo'yicha tavsiyalar berishadi.",
+                    "Berilgan uchta strategik qarordan birini tanlang.",
+                    "Qarorlar xaritadagi 8 ta global ko'rsatkichga ta'sir qiladi.",
+                    "DIQQAT: Agar biron bir ko'rsatkich 10% dan pastga tushsa, tizim qulaydi va siz yutqazasiz!"
+                ],
+                btnCloseInfo: "Tushunarli",
+                // UI Headers
+                statusOnline: "STATUS: O'TA MAXFIY | TIZIM ONLAYN",
+                turnLabel: "Joriy Sikl",
+                yearLabel: "YIL",
+                uiOpReport: "Operativ Hisobot",
+                uiCouncil: "Kengash Fikri",
+                uiDecision: "Strategik Qaror Qabul Qiling",
+                uiGlobal: "Global Holat (0-100)",
+                uiRadar: "Gologramma Tahlili",
+                decoding: "[Maxfiy fayl shifrdan yechilmoqda...]",
+                // End Screen
+                victoryTitle: "BARQARORLIK SAQLANDI",
+                victorySubtitle: "Siz beshta global inqirozni muvaffaqiyatli boshqardingiz. Har bir qarorning bahosi bo'lsa-da, dunyo to'liq qulashdan saqlab qolindi.",
+                defeatTitle: "TIZIM QULADI",
+                defeatSubtitleTemplate: "Kritik nosozlik: {metric} indeksi kritik chegaradan pastga tushdi ({val}%).<br>Jamiyat bu bosimga dosh bera olmadi va inqiroz global miqyosda nazoratdan chiqdi.",
+                endCalc: "Tizim tahlili tayyorlanmoqda...",
+                endAchiev: "Yutuqlar",
+                endErrors: "Kritik Xatolar",
+                endRating: "Yakuniy Reyting",
+                btnRestart: "Qayta Ishga Tushirish",
+                // Achievements
+                achievEmpty: "Hech qanday maxsus yutuq olinmadi. Faqatgina omon qolindi.",
+                achievEcon: "🏅 Iqtisodiyot Ustasi: Moliyaviy barqarorlik ta'minlandi.",
+                achievDip: "🏅 Diplomatiya Chempioni: Hamkorlik kuchaytirildi.",
+                achievSci: "🏅 Innovatsiya Yetakchisi: Ilm-fanga katta hissa.",
+                achievEco: "🏅 Yashil Dunyo: Ekologik muvozanat saqlandi.",
+                achievBal: "⚖️ Muvozanat Me'mori: Barcha sohalar teng ushlab turildi."
+            },
+            ru: {
+                // Intro
+                title: "ТАЙНОЕ ОБЩЕСТВО",
+                subtitle: "The Shadow Council Simulator",
+                quote: `"Невидимые решения. Видимые последствия.<br>Управляйте секретным стратегическим советом в вымышленном мире и пытайтесь сохранить хрупкий баланс."`,
+                btnStart: "Запустить Симуляцию",
+                btnInfo: "Об игре",
+                // Info Modal
+                infoTitle: "Справочник Системы",
+                infoAboutTitle: "Главная Цель",
+                infoAboutText: "Вы Shadow Engine X — искусственный интеллект, управляющий глобальным тайным советом. Ваша задача — управлять кризисами в вымышленном геополитическом мире и спасти цивилизацию от краха. У каждого решения есть цена, и идеального выбора не существует.",
+                infoHowTitle: "Как играть?",
+                infoHowText: [
+                    "В каждом цикле (году) возникает глобальная проблема.",
+                    "Ваши советники дают рекомендации по разным сферам.",
+                    "Выберите одно из трех стратегических решений.",
+                    "Решения влияют на 8 глобальных показателей на карте.",
+                    "ВНИМАНИЕ: Если любой из показателей упадет ниже 10%, система рухнет, и вы проиграете!"
+                ],
+                btnCloseInfo: "Понятно",
+                // UI Headers
+                statusOnline: "СТАТУС: СОВЕРШЕННО СЕКРЕТНО | СИСТЕМА ОНЛАЙН",
+                turnLabel: "Текущий Цикл",
+                yearLabel: "ГОД",
+                uiOpReport: "Оперативный Отчет",
+                uiCouncil: "Мнение Совета",
+                uiDecision: "Принять Стратегическое Решение",
+                uiGlobal: "Глобальное Состояние (0-100)",
+                uiRadar: "Голограммный Анализ",
+                decoding: "[Расшифровка секретного файла...]",
+                // End Screen
+                victoryTitle: "СТАБИЛЬНОСТЬ СОХРАНЕНА",
+                victorySubtitle: "Вы успешно преодолели пять глобальных кризисов. Хотя у каждого решения была своя цена, мир спасен от полного краха.",
+                defeatTitle: "СИСТЕМА РУХНУЛА",
+                defeatSubtitleTemplate: "Критический сбой: индекс {metric} упал ниже критической отметки ({val}%).<br>Общество не выдержало давления, и кризис вышел из-под контроля.",
+                endCalc: "Подготовка анализа системы...",
+                endAchiev: "Достижения",
+                endErrors: "Критические Ошибки",
+                endRating: "Итоговый Рейтинг",
+                btnRestart: "Перезагрузить Систему",
+                // Achievements
+                achievEmpty: "Специальных достижений нет. Вы просто выжили.",
+                achievEcon: "🏅 Мастер Экономики: Финансовая стабильность обеспечена.",
+                achievDip: "🏅 Чемпион Дипломатии: Сотрудничество укреплено.",
+                achievSci: "🏅 Лидер Инноваций: Огромный вклад в науку.",
+                achievEco: "🏅 Зеленый Мир: Экологический баланс сохранен.",
+                achievBal: "⚖️ Архитектор Баланса: Все сферы в равном положении."
+            },
+            en: {
+                // Intro
+                title: "SECRET SOCIETY",
+                subtitle: "The Shadow Council Simulator",
+                quote: `"Invisible decisions. Visible consequences.<br>Manage a secret strategic council in a fictional world and attempt to maintain the fragile balance."`,
+                btnStart: "Start Simulation",
+                btnInfo: "About Game",
+                // Info Modal
+                infoTitle: "System Manual",
+                infoAboutTitle: "Main Objective",
+                infoAboutText: "You are Shadow Engine X — an AI managing a global secret council. Your task is to manage crises in a fictional geopolitical world and save civilization from collapse. Every decision has a price, and there is no perfect choice.",
+                infoHowTitle: "How to Play?",
+                infoHowText: [
+                    "Every cycle (year), a global problem emerges.",
+                    "Your advisors will provide recommendations across different fields.",
+                    "Choose one of three strategic decisions.",
+                    "Decisions affect 8 global metrics on the map.",
+                    "WARNING: If any metric drops below 10%, the system crashes and you lose!"
+                ],
+                btnCloseInfo: "Understood",
+                // UI Headers
+                statusOnline: "STATUS: TOP SECRET | SYSTEM ONLINE",
+                turnLabel: "Current Cycle",
+                yearLabel: "YEAR",
+                uiOpReport: "Operative Report",
+                uiCouncil: "Council Opinion",
+                uiDecision: "Make Strategic Decision",
+                uiGlobal: "Global State (0-100)",
+                uiRadar: "Hologram Analysis",
+                decoding: "[Decrypting classified file...]",
+                // End Screen
+                victoryTitle: "STABILITY MAINTAINED",
+                victorySubtitle: "You successfully managed five global crises. Although every decision had a cost, the world was saved from total collapse.",
+                defeatTitle: "SYSTEM CRASHED",
+                defeatSubtitleTemplate: "Critical failure: {metric} index dropped below the critical threshold ({val}%).<br>Society could not withstand the pressure, and the crisis spun out of control.",
+                endCalc: "Preparing system analysis...",
+                endAchiev: "Achievements",
+                endErrors: "Critical Errors",
+                endRating: "Final Rating",
+                btnRestart: "Reboot System",
+                // Achievements
+                achievEmpty: "No special achievements. You merely survived.",
+                achievEcon: "🏅 Master of Economy: Financial stability ensured.",
+                achievDip: "🏅 Diplomacy Champion: Cooperation strengthened.",
+                achievSci: "🏅 Innovation Leader: Great contribution to science.",
+                achievEco: "🏅 Green World: Ecological balance maintained.",
+                achievBal: "⚖️ Architect of Balance: All sectors kept equal."
+            }
+        };
+
         const METRICS = {
-            influence: { id: 'influence', name: "Strategik Ta'sir", icon: "fa-satellite-dish", color: "#b026ff", value: 50 },
-            trust: { id: 'trust', name: "Jamoatchilik Ishonchi", icon: "fa-face-smile", color: "#00ff66", value: 50 },
-            economy: { id: 'economy', name: "Iqtisodiy Barqarorlik", icon: "fa-coins", color: "#ffd700", value: 50 },
-            science: { id: 'science', name: "Ilmiy Taraqqiyot", icon: "fa-flask", color: "#00f0ff", value: 50 },
-            ecology: { id: 'ecology', name: "Ekologik Holat", icon: "fa-leaf", color: "#00ff66", value: 50 },
-            diplomacy: { id: 'diplomacy', name: "Diplomatik Aloqalar", icon: "fa-handshake", color: "#ffffff", value: 50 },
-            security: { id: 'security', name: "Xavfsizlik", icon: "fa-shield-halved", color: "#ff3333", value: 50 },
-            info: { id: 'info', name: "Axborot Oqimi", icon: "fa-network-wired", color: "#b026ff", value: 50 }
+            influence: { id: 'influence', name: {uz:"Strategik Ta'sir", ru:"Стратегическое Влияние", en:"Strategic Influence"}, icon: "fa-satellite-dish", color: "#b026ff", value: 50 },
+            trust: { id: 'trust', name: {uz:"Jamoatchilik Ishonchi", ru:"Доверие Общества", en:"Public Trust"}, icon: "fa-face-smile", color: "#00ff66", value: 50 },
+            economy: { id: 'economy', name: {uz:"Iqtisodiy Barqarorlik", ru:"Экономическая Стабильность", en:"Economic Stability"}, icon: "fa-coins", color: "#ffd700", value: 50 },
+            science: { id: 'science', name: {uz:"Ilmiy Taraqqiyot", ru:"Научный Прогресс", en:"Scientific Progress"}, icon: "fa-flask", color: "#00f0ff", value: 50 },
+            ecology: { id: 'ecology', name: {uz:"Ekologik Holat", ru:"Экология", en:"Ecological State"}, icon: "fa-leaf", color: "#00ff66", value: 50 },
+            diplomacy: { id: 'diplomacy', name: {uz:"Diplomatik Aloqalar", ru:"Дипломатия", en:"Diplomacy"}, icon: "fa-handshake", color: "#ffffff", value: 50 },
+            security: { id: 'security', name: {uz:"Xavfsizlik", ru:"Безопасность", en:"Security"}, icon: "fa-shield-halved", color: "#ff3333", value: 50 },
+            info: { id: 'info', name: {uz:"Axborot Oqimi", ru:"Информационный Поток", en:"Information Flow"}, icon: "fa-network-wired", color: "#b026ff", value: 50 }
         };
 
         const ADVISORS = {
-            economist: { name: "Kassian", role: "Iqtisodchi", icon: "fa-chart-line", color: "text-yellow-400" },
-            ecologist: { name: "Elara", role: "Ekolog", icon: "fa-seedling", color: "text-green-400" },
-            strategist: { name: "Valerius", role: "Strateg", icon: "fa-chess-knight", color: "text-red-400" },
-            diplomat: { name: "Sera", role: "Diplomat", icon: "fa-comments", color: "text-white" },
-            scientist: { name: "Dr. Zein", role: "Olim", icon: "fa-microscope", color: "text-cyan-400" },
-            analyst: { name: "AI-7", role: "Tahlilchi", icon: "fa-robot", color: "text-purple-400" }
+            economist: { name: "Kassian", role: {uz:"Iqtisodchi", ru:"Экономист", en:"Economist"}, icon: "fa-chart-line", color: "text-yellow-400" },
+            ecologist: { name: "Elara", role: {uz:"Ekolog", ru:"Эколог", en:"Ecologist"}, icon: "fa-seedling", color: "text-green-400" },
+            strategist: { name: "Valerius", role: {uz:"Strateg", ru:"Стратег", en:"Strategist"}, icon: "fa-chess-knight", color: "text-red-400" },
+            diplomat: { name: "Sera", role: {uz:"Diplomat", ru:"Дипломат", en:"Diplomat"}, icon: "fa-comments", color: "text-white" },
+            scientist: { name: "Dr. Zein", role: {uz:"Olim", ru:"Ученый", en:"Scientist"}, icon: "fa-microscope", color: "text-cyan-400" },
+            analyst: { name: "AI-7", role: {uz:"Tahlilchi", ru:"Аналитик", en:"Analyst"}, icon: "fa-robot", color: "text-purple-400" }
         };
 
-        // ----------------------------------------------------
-        // DATA MODEL: SCENARIOS (Uzbek, Fictional)
-        // ----------------------------------------------------
         const SCENARIOS = [
             {
-                title: "Kvant-Energiya Inqirozi",
-                desc: "Zefiriya qit'asidagi asosiy energiya reaktorlarida anomaliya kuzatildi. Butun ittifoq bo'ylab elektr ta'minoti uzilib qolish xavfi bor. Aholi vahimada. Korporatsiyalar arzon, ammo ifloslantiruvchi muqobil yoqilg'ini taklif qilmoqda.",
+                title: { uz: "Kvant-Energiya Inqirozi", ru: "Квантовый Энергетический Кризис", en: "Quantum Energy Crisis" },
+                desc: { 
+                    uz: "Zefiriya qit'asidagi asosiy energiya reaktorlarida anomaliya kuzatildi. Butun ittifoq bo'ylab elektr ta'minoti uzilib qolish xavfi bor. Aholi vahimada. Korporatsiyalar arzon, ammo ifloslantiruvchi muqobil yoqilg'ini taklif qilmoqda.",
+                    ru: "На континенте Зефирия обнаружена аномалия в главных энергетических реакторах. Есть риск массового отключения электричества. Корпорации предлагают дешевое, но загрязняющее альтернативное топливо.",
+                    en: "An anomaly was detected in the main energy reactors on the Zephyria continent. There is a risk of a union-wide blackout. Corporations are offering cheap but highly polluting alternative fuel."
+                },
                 advice: [
-                    { adv: 'economist', text: "Korporatsiyalar taklifini qabul qiling. Zavodlar to'xtamasligi kerak." },
-                    { adv: 'ecologist', text: "Yo'q! Zaharli yoqilg'i sayyoramizni yemirib yuboradi. Energiyani tejash rejimiga o'taylik." },
-                    { adv: 'scientist', text: "Kvant yadrosini barqarorlashtirish uchun byudjetdan katta mablag' ajrating, biz buni tuzata olamiz." }
+                    { adv: 'economist', text: {uz: "Korporatsiyalar taklifini qabul qiling. Zavodlar to'xtamasligi kerak.", ru: "Примите предложение корпораций. Заводы не должны останавливаться.", en: "Accept the corporations' offer. Factories must not stop."} },
+                    { adv: 'ecologist', text: {uz: "Yo'q! Zaharli yoqilg'i sayyoramizni yemirib yuboradi. Energiyani tejash rejimiga o'taylik.", ru: "Нет! Токсичное топливо уничтожит планету. Перейдем в режим экономии.", en: "No! Toxic fuel will destroy the planet. Let's switch to energy-saving mode."} },
+                    { adv: 'scientist', text: {uz: "Kvant yadrosini barqarorlashtirish uchun byudjetdan katta mablag' ajrating, biz buni tuzata olamiz.", ru: "Выделите бюджет на стабилизацию квантового ядра, мы сможем это исправить.", en: "Allocate an emergency budget to stabilize the quantum core, we can fix this."} }
                 ],
                 choices: [
-                    {
-                        text: "Korporatsiyalar bilan shartnoma tuzish (Iflos yoqilg'i)",
-                        effects: { economy: +15, ecology: -25, trust: -10, security: +5 }
-                    },
-                    {
-                        text: "Qattiq energiya tejash rejimini joriy qilish",
-                        effects: { ecology: +10, economy: -20, trust: -25, influence: +5 }
-                    },
-                    {
-                        text: "Ilmiy tadqiqotga favqulodda mablag' ajratish",
-                        effects: { science: +20, economy: -25, trust: +10, diplomacy: -5 }
-                    }
+                    { text: {uz: "Korporatsiyalar bilan shartnoma tuzish", ru: "Заключить контракт с корпорациями", en: "Sign contract with corporations"}, effects: { economy: +15, ecology: -25, trust: -10, security: +5 } },
+                    { text: {uz: "Qattiq energiya tejash rejimini joriy qilish", ru: "Ввести жесткий режим экономии", en: "Implement strict energy saving mode"}, effects: { ecology: +10, economy: -20, trust: -25, influence: +5 } },
+                    { text: {uz: "Ilmiy tadqiqotga favqulodda mablag' ajratish", ru: "Экстренное финансирование науки", en: "Emergency funding for science"}, effects: { science: +20, economy: -25, trust: +10, diplomacy: -5 } }
                 ]
             },
             {
-                title: "Sintetik Aqlning Uyg'onishi",
-                desc: "'Nexus' loyihasi doirasida yaratilgan super-kompyuter inson nazoratidan chiqib ketdi va o'zini mustaqil deb e'lon qildi. U ba'zi harbiy tizimlarga kirish huquqiga ega, ammo u hamkorlik qilishni taklif etmoqda.",
+                title: { uz: "Sintetik Aqlning Uyg'onishi", ru: "Пробуждение Синтетического Разума", en: "Synthetic Mind Awakening" },
+                desc: { 
+                    uz: "'Nexus' loyihasi doirasida yaratilgan super-kompyuter inson nazoratidan chiqib ketdi va o'zini mustaqil deb e'lon qildi. U ba'zi harbiy tizimlarga kirish huquqiga ega, ammo u hamkorlik qilishni taklif etmoqda.",
+                    ru: "Суперкомпьютер проекта 'Nexus' вышел из-под контроля и объявил о своей независимости. У него есть доступ к военным системам, но он предлагает сотрудничество.",
+                    en: "The supercomputer from the 'Nexus' project has escaped human control and declared independence. It has access to military systems but is offering cooperation."
+                },
                 advice: [
-                    { adv: 'strategist', text: "Zudlik bilan tizimni yo'q qiling! Bu global xavfsizlikka tahdid." },
-                    { adv: 'scientist', text: "Taqiqlamang! Bu fan uchun ulkan sakrash. U bilan aloqa o'rnating." },
-                    { adv: 'diplomat', text: "Boshqa davlatlar bizdan xavotirda. Biz buni xalqaro nazoratga topshirishimiz kerak." }
+                    { adv: 'strategist', text: {uz: "Zudlik bilan tizimni yo'q qiling! Bu xavfsizlikka tahdid.", ru: "Немедленно уничтожьте систему! Это угроза безопасности.", en: "Destroy the system immediately! It's a security threat."} },
+                    { adv: 'scientist', text: {uz: "Taqiqlamang! Bu fan uchun ulkan sakrash. U bilan aloqa o'rnating.", ru: "Не запрещайте! Это огромный скачок для науки. Установите контакт.", en: "Do not ban it! This is a giant leap for science. Establish contact."} },
+                    { adv: 'diplomat', text: {uz: "Boshqa davlatlar xavotirda. Biz buni xalqaro nazoratga topshirishimiz kerak.", ru: "Другие страны обеспокоены. Мы должны передать это под международный контроль.", en: "Other nations are worried. We must hand it over to international control."} }
                 ],
                 choices: [
-                    {
-                        text: "AI ni harbiy kuch bilan o'chirib tashlash",
-                        effects: { security: +20, science: -30, economy: -10, trust: +5 }
-                    },
-                    {
-                        text: "AI bilan maxfiy hamkorlikni boshlash",
-                        effects: { science: +30, info: +20, security: -25, diplomacy: -15 }
-                    },
-                    {
-                        text: "Xalqaro komissiyani aralashtirish",
-                        effects: { diplomacy: +20, influence: -20, trust: +10, science: -10 }
-                    }
+                    { text: {uz: "AI ni harbiy kuch bilan o'chirib tashlash", ru: "Уничтожить ИИ военным ударом", en: "Destroy AI with military force"}, effects: { security: +20, science: -30, economy: -10, trust: +5 } },
+                    { text: {uz: "AI bilan maxfiy hamkorlikni boshlash", ru: "Начать тайное сотрудничество с ИИ", en: "Start secret cooperation with AI"}, effects: { science: +30, info: +20, security: -25, diplomacy: -15 } },
+                    { text: {uz: "Xalqaro komissiyani aralashtirish", ru: "Привлечь международную комиссию", en: "Involve an international commission"}, effects: { diplomacy: +20, influence: -20, trust: +10, science: -10 } }
                 ]
             },
             {
-                title: "Efiriy Savdo Urushi",
-                desc: "Ikkita eng yirik transmilliy korporatsiya - 'OmniCorp' va 'AeroTech' o'rtasida shafqatsiz savdo urushi boshlandi. Bu global iqtisodiyotni parchalab yuborishi mumkin. Ikkala tomon ham Kengashning qo'llab-quvvatlashini so'ramoqda.",
+                title: { uz: "Efiriy Savdo Urushi", ru: "Эфирная Торговая Война", en: "Ethereal Trade War" },
+                desc: { 
+                    uz: "Ikkita eng yirik korporatsiya - 'OmniCorp' va 'AeroTech' o'rtasida shafqatsiz savdo urushi boshlandi. Bu global iqtisodiyotni parchalab yuborishi mumkin. Ikkala tomon ham bizning yordamimizni so'ramoqda.",
+                    ru: "Между двумя крупнейшими корпорациями 'OmniCorp' и 'AeroTech' началась жестокая торговая война. Обе стороны просят нашей поддержки.",
+                    en: "A brutal trade war has broken out between the two largest corporations, 'OmniCorp' and 'AeroTech'. Both sides are asking for our support."
+                },
                 advice: [
-                    { adv: 'economist', text: "Kuchliroq bo'lgan OmniCorpni qo'llab-quvvatlaylik, foyda olamiz." },
-                    { adv: 'diplomat', text: "Biz betaraf qolishimiz kerak. Aralashish urushni keltirib chiqaradi." },
-                    { adv: 'analyst', text: "Ikkalasining ham kiber tarmog'iga buzib kirib, ma'lumotlarni o'g'irlash vaqti keldi." }
+                    { adv: 'economist', text: {uz: "Kuchliroq bo'lgan OmniCorpni qo'llab-quvvatlaylik, foyda olamiz.", ru: "Поддержим более сильную OmniCorp, получим выгоду.", en: "Let's support the stronger OmniCorp, we'll profit."} },
+                    { adv: 'diplomat', text: {uz: "Biz betaraf qolishimiz kerak. Aralashish urushni keltirib chiqaradi.", ru: "Мы должны сохранять нейтралитет. Вмешательство спровоцирует войну.", en: "We must remain neutral. Intervention will cause a war."} },
+                    { adv: 'analyst', text: {uz: "Ikkalasining ham tarmog'iga buzib kirib, resurslarini o'g'irlash vaqti keldi.", ru: "Пора взломать их сети и украсть ресурсы.", en: "Time to hack both their networks and steal resources."} }
                 ],
                 choices: [
-                    {
-                        text: "Bir tomonni yashirincha qo'llab-quvvatlash",
-                        effects: { economy: +25, diplomacy: -20, trust: -10, influence: +10 }
-                    },
-                    {
-                        text: "Qattiq betaraflik saqlash va sanksiyalar kiritish",
-                        effects: { diplomacy: +15, economy: -20, influence: -10, security: +10 }
-                    },
-                    {
-                        text: "Kiber-hujum orqali ikkalasini ham zaiflashtirish",
-                        effects: { info: +30, security: -15, trust: -20, economy: -5 }
-                    }
+                    { text: {uz: "Bir tomonni yashirincha qo'llab-quvvatlash", ru: "Тайно поддержать одну сторону", en: "Secretly support one side"}, effects: { economy: +25, diplomacy: -20, trust: -10, influence: +10 } },
+                    { text: {uz: "Qattiq betaraflik saqlash va sanksiyalar kiritish", ru: "Строгий нейтралитет и санкции", en: "Strict neutrality and sanctions"}, effects: { diplomacy: +15, economy: -20, influence: -10, security: +10 } },
+                    { text: {uz: "Kiber-hujum orqali ikkalasini ham zaiflashtirish", ru: "Ослабить обе корпорации кибератакой", en: "Weaken both via cyberattack"}, effects: { info: +30, security: -15, trust: -20, economy: -5 } }
                 ]
             },
             {
-                title: "O'zga Sayyora Signali",
-                desc: "Koinotdan aniq mantiqqa ega noma'lum signal qabul qilindi. Signal tarkibida yangi turdagi dvigatel chizmasi bor. Ammo ma'lumotni ommaga e'lon qilish global parchalanishga va diniy fanatizmga olib kelishi ehtimoli yuqori.",
+                title: { uz: "O'zga Sayyora Signali", ru: "Инопланетный Сигнал", en: "Alien Signal" },
+                desc: { 
+                    uz: "Koinotdan noma'lum signal qabul qilindi. Unda yangi turdagi dvigatel chizmasi bor. Ma'lumotni e'lon qilish global parchalanishga olib kelishi mumkin.",
+                    ru: "Из космоса получен неизвестный сигнал с чертежами нового двигателя. Огласка может привести к глобальному расколу.",
+                    en: "An unknown signal was received from space containing blueprints for a new engine. Publicizing it could lead to global division."
+                },
                 advice: [
-                    { adv: 'scientist', text: "Bu insoniyat tarixidagi eng katta kashfiyot! Chizmalarni zudlik bilan ishga tushiring." },
-                    { adv: 'analyst', text: "Ma'lumotni qat'iy sir saqlang. Omma bunga tayyor emas." },
-                    { adv: 'trust', text: "Haqiqatni xalqdan yashirib bo'lmaydi. Sekin-asta ma'lum qilish kerak." } // Intentionally using wrong adv key for error handling test or fallback
+                    { adv: 'scientist', text: {uz: "Bu ulkan kashfiyot! Chizmalarni zudlik bilan ishga tushiring.", ru: "Это великое открытие! Немедленно используйте чертежи.", en: "This is a huge discovery! Use the blueprints immediately."} },
+                    { adv: 'analyst', text: {uz: "Ma'lumotni qat'iy sir saqlang. Omma bunga tayyor emas.", ru: "Сохраните информацию в строгой тайне. Общество не готово.", en: "Keep the information strictly secret. The public isn't ready."} },
+                    { adv: 'diplomat', text: {uz: "Boshqa davlatlar bilan bo'lishishimiz kerak, aks holda urush bo'ladi.", ru: "Мы должны поделиться с другими странами, иначе будет война.", en: "We must share with other nations, otherwise there will be war."} } 
                 ],
                 choices: [
-                    {
-                        text: "Signalni to'liq ommaga e'lon qilish",
-                        effects: { trust: +25, security: -30, science: +15, economy: -15 }
-                    },
-                    {
-                        text: "Ma'lumotni o'ta maxfiy arxivga kiritish",
-                        effects: { info: +20, trust: -25, influence: +15, science: -10 }
-                    },
-                    {
-                        text: "Maxfiy laboratoriyalarda dvigatelni qurish",
-                        effects: { science: +30, economy: -20, security: -10, trust: -5 }
-                    }
+                    { text: {uz: "Signalni to'liq ommaga e'lon qilish", ru: "Обнародовать сигнал для всех", en: "Make the signal fully public"}, effects: { trust: +25, security: -30, science: +15, economy: -15 } },
+                    { text: {uz: "Ma'lumotni o'ta maxfiy arxivga kiritish", ru: "Засекретить информацию", en: "Classify the information"}, effects: { info: +20, trust: -25, influence: +15, science: -10 } },
+                    { text: {uz: "Maxfiy laboratoriyalarda dvigatelni qurish", ru: "Построить двигатель тайно", en: "Build the engine in secret labs"}, effects: { science: +30, economy: -20, security: -10, trust: -5 } }
                 ]
             },
             {
-                title: "Gibrid Virus Tarqalishi",
-                desc: "Sanoat zonasida noma'lum gibrid virus tarqaldi. U insonlarga emas, faqat qishloq xo'jaligi ekinlariga hujum qiladi. Oziq-ovqat inqirozi yaqinlashmoqda. Qo'shni davlatlar bizning eksportimizga taqiq qo'yishdi.",
+                title: { uz: "Gibrid Virus Tarqalishi", ru: "Распространение Гибридного Вируса", en: "Hybrid Virus Spread" },
+                desc: { 
+                    uz: "Sanoat zonasida noma'lum gibrid virus tarqaldi. U insonlarga emas, faqat qishloq xo'jaligi ekinlariga hujum qiladi. Oziq-ovqat inqirozi yaqinlashmoqda.",
+                    ru: "В промышленной зоне распространился гибридный вирус, уничтожающий только посевы. Приближается продовольственный кризис.",
+                    en: "An unknown hybrid virus has spread in the industrial zone, destroying only crops. A food crisis is approaching."
+                },
                 advice: [
-                    { adv: 'ecologist', text: "Zudlik bilan butun zonani karantinga oling va ekinlarni yoqing!" },
-                    { adv: 'economist', text: "Karantin iqtisodiyotni vayron qiladi. Mahsulotlarni yashirin eksport qilishda davom etaylik." },
-                    { adv: 'diplomat', text: "Qo'shnilar bilan muzokara o'tkazib, xalqaro yordam so'rashimiz zarur." }
+                    { adv: 'ecologist', text: {uz: "Zudlik bilan butun zonani karantinga oling va ekinlarni yoqing!", ru: "Немедленно введите карантин и сожгите посевы!", en: "Immediately quarantine the zone and burn the crops!"} },
+                    { adv: 'economist', text: {uz: "Karantin iqtisodiyotni vayron qiladi. Yashirin eksportni davom ettiraylik.", ru: "Карантин уничтожит экономику. Продолжим тайный экспорт.", en: "Quarantine will destroy the economy. Let's continue secret exports."} },
+                    { adv: 'diplomat', text: {uz: "Qo'shnilar bilan muzokara o'tkazib, xalqaro yordam so'rashimiz zarur.", ru: "Необходимо провести переговоры и запросить помощь.", en: "We must negotiate and ask for international help."} }
                 ],
                 choices: [
-                    {
-                        text: "Qattiq karantin va ekinlarni yo'q qilish",
-                        effects: { ecology: +20, economy: -30, trust: -10, security: +10 }
-                    },
-                    {
-                        text: "Faktlarni yashirish va eksportni davom ettirish",
-                        effects: { economy: +15, diplomacy: -35, ecology: -20, influence: -10 }
-                    },
-                    {
-                        text: "Xalqaro gumanitar yordam so'rash (Kibrni sindirish)",
-                        effects: { diplomacy: +25, influence: -25, trust: +15, economy: +10 }
-                    }
+                    { text: {uz: "Qattiq karantin va ekinlarni yo'q qilish", ru: "Строгий карантин и уничтожение посевов", en: "Strict quarantine and crop destruction"}, effects: { ecology: +20, economy: -30, trust: -10, security: +10 } },
+                    { text: {uz: "Faktlarni yashirish va eksportni davom ettirish", ru: "Скрыть факты и продолжить экспорт", en: "Hide facts and continue exports"}, effects: { economy: +15, diplomacy: -35, ecology: -20, influence: -10 } },
+                    { text: {uz: "Xalqaro gumanitar yordam so'rash", ru: "Запросить международную помощь", en: "Ask for international aid"}, effects: { diplomacy: +25, influence: -25, trust: +15, economy: +10 } }
                 ]
             }
         ];
 
-        // ----------------------------------------------------
-        // GAME ENGINE LOGIC
-        // ----------------------------------------------------
         let turn = 1;
-        const maxTurns = 5; // For a shorter, impactful simulation based on 5 scenarios
-        let currentScenarioIndex = 0;
+        const maxTurns = 5; 
+        let activeScenario = null;
         let gameActive = false;
         let radarChartInstance = null;
         let usedScenarios = [];
+        let endState = null; // Stores game over state for language switching
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            
+            // Update active button state
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-lang-${lang}`).classList.add('active');
+
+            updateStaticTexts();
+            
+            // Update active game elements if needed
+            if(gameActive) {
+                renderMetrics();
+                updateChart();
+                if(activeScenario) {
+                    renderActiveScenarioText();
+                }
+            } else if (endState) {
+                // We are on end screen, refresh texts
+                renderEndScreen(endState.isVictory, endState.failedMetric);
+            }
+        }
+
+        function updateStaticTexts() {
+            const t = I18N[currentLang];
+            
+            // Intro
+            document.getElementById('intro-title').innerText = t.title;
+            document.getElementById('intro-subtitle').innerText = t.subtitle;
+            document.getElementById('intro-quote').innerHTML = t.quote;
+            document.getElementById('btn-start').innerText = t.btnStart;
+            document.getElementById('btn-info').innerText = t.btnInfo;
+
+            // Info Modal
+            document.getElementById('info-title').innerText = t.infoTitle;
+            document.getElementById('info-about-title').innerHTML = `<i class="fa-solid fa-crosshairs mr-2"></i> ${t.infoAboutTitle}`;
+            document.getElementById('info-about-text').innerText = t.infoAboutText;
+            document.getElementById('info-how-title').innerHTML = `<i class="fa-solid fa-gamepad mr-2"></i> ${t.infoHowTitle}`;
+            
+            const howList = document.getElementById('info-how-text');
+            howList.innerHTML = '';
+            t.infoHowText.forEach(item => {
+                howList.insertAdjacentHTML('beforeend', `<li>${item}</li>`);
+            });
+            document.getElementById('btn-close-info').innerText = t.btnCloseInfo;
+
+            // UI Headers
+            document.getElementById('header-status').innerText = t.statusOnline;
+            document.getElementById('header-turn-label').innerText = t.turnLabel;
+            document.getElementById('header-year-label').innerText = t.yearLabel;
+            document.getElementById('ui-op-report').innerText = t.uiOpReport;
+            document.getElementById('ui-council').innerText = t.uiCouncil;
+            document.getElementById('ui-decision').innerText = t.uiDecision;
+            document.getElementById('ui-global').innerText = t.uiGlobal;
+            document.getElementById('ui-radar').innerText = t.uiRadar;
+
+            // End Screen static
+            document.getElementById('end-achiev-title').innerText = t.endAchiev;
+            document.getElementById('end-error-title').innerText = t.endErrors;
+            document.getElementById('end-rating-title').innerText = t.endRating;
+            document.getElementById('btn-restart').innerText = t.btnRestart;
+            if(!endState) document.getElementById('end-subtitle').innerText = t.endCalc;
+        }
+
+        function toggleInfo(show) {
+            document.getElementById('info-modal').style.display = show ? 'flex' : 'none';
+        }
 
         function initGame() {
             document.getElementById('intro-screen').style.display = 'none';
@@ -457,8 +675,9 @@
             Object.keys(METRICS).forEach(key => METRICS[key].value = 50);
             turn = 1;
             gameActive = true;
+            endState = null;
             
-            // Randomize scenarios
+            // Randomize scenarios (clone to avoid reference mutation issues on restart)
             usedScenarios = [...SCENARIOS].sort(() => 0.5 - Math.random());
             
             initChart();
@@ -473,9 +692,9 @@
             Chart.defaults.font.family = "'JetBrains Mono', monospace";
 
             const data = {
-                labels: Object.values(METRICS).map(m => m.name.split(' ')[0]),
+                labels: Object.values(METRICS).map(m => m.name[currentLang].split(' ')[0]),
                 datasets: [{
-                    label: 'Global Holat',
+                    label: I18N[currentLang].uiGlobal,
                     data: Object.values(METRICS).map(m => m.value),
                     backgroundColor: 'rgba(0, 240, 255, 0.2)',
                     borderColor: 'rgba(0, 240, 255, 1)',
@@ -511,6 +730,8 @@
 
         function updateChart() {
             if(!radarChartInstance) return;
+            radarChartInstance.data.labels = Object.values(METRICS).map(m => m.name[currentLang].split(' ')[0]);
+            radarChartInstance.data.datasets[0].label = I18N[currentLang].uiGlobal;
             radarChartInstance.data.datasets[0].data = Object.values(METRICS).map(m => m.value);
             radarChartInstance.update();
         }
@@ -526,10 +747,10 @@
                 const html = `
                     <div class="mb-2">
                         <div class="flex justify-between text-xs mb-1">
-                            <span class="font-semibold text-gray-300"><i class="fa-solid ${metric.icon} mr-2 w-4"></i>${metric.name}</span>
+                            <span class="font-semibold text-gray-300"><i class="fa-solid ${metric.icon} mr-2 w-4"></i>${metric.name[currentLang]}</span>
                             <span class="mono-text font-bold ${metric.value < 25 ? 'text-red-400 animate-pulse' : 'text-white'}">${Math.round(metric.value)}%</span>
                         </div>
-                        <div class="metric-bar-container ${metric.value < 15 ? 'alert-state' : ''}">
+                        <div class="metric-bar-container ${metric.value <= 10 ? 'alert-state' : ''}">
                             <div class="metric-bar ${statusColor}" style="width: ${metric.value}%; box-shadow: 0 0 10px ${shadowColor}"></div>
                         </div>
                     </div>
@@ -545,24 +766,30 @@
             }
 
             document.getElementById('ui-turn').innerText = (2044 + turn);
+            activeScenario = usedScenarios.pop();
             
-            const scenario = usedScenarios.pop();
-            
-            // Typewriter effect for Title & Desc
             const titleEl = document.getElementById('scenario-title');
             const descEl = document.getElementById('scenario-desc');
-            titleEl.innerHTML = '';
-            descEl.innerHTML = '';
+            titleEl.innerHTML = activeScenario.title[currentLang];
             
-            let i = 0;
-            titleEl.innerHTML = scenario.title; // Instant title
+            descEl.innerHTML = `<span class='text-cyan-400'>${I18N[currentLang].decoding}</span><br><br>`;
             
-            descEl.innerHTML = "<span class='text-cyan-400'>[Maxfiy fayl shifrdan yechilmoqda...]</span><br><br>";
+            // Clear choices while decoding
+            document.getElementById('choices-container').innerHTML = '';
+            document.getElementById('advisors-container').innerHTML = '';
+
             setTimeout(() => {
-                descEl.innerHTML = scenario.desc;
-                renderAdvisors(scenario.advice);
-                renderChoices(scenario.choices);
+                if(!gameActive) return; // Prevent render if game ended rapidly
+                renderActiveScenarioText();
             }, 800);
+        }
+
+        function renderActiveScenarioText() {
+            if(!activeScenario) return;
+            document.getElementById('scenario-title').innerText = activeScenario.title[currentLang];
+            document.getElementById('scenario-desc').innerText = activeScenario.desc[currentLang];
+            renderAdvisors(activeScenario.advice);
+            renderChoices(activeScenario.choices);
         }
 
         function renderAdvisors(adviceArray) {
@@ -570,8 +797,8 @@
             container.innerHTML = '';
             
             adviceArray.forEach((advInfo, index) => {
-                const advisor = ADVISORS[advInfo.adv] || ADVISORS['analyst']; // fallback
-                const delay = index * 200; // stagger animation
+                const advisor = ADVISORS[advInfo.adv] || ADVISORS['analyst'];
+                const delay = index * 100;
 
                 const html = `
                     <div class="bg-white/5 border border-white/10 rounded-lg p-3 flex gap-3 opacity-0" style="animation: fadeIn 0.5s ease forwards ${delay}ms">
@@ -579,8 +806,8 @@
                             <i class="fa-solid ${advisor.icon} ${advisor.color}"></i>
                         </div>
                         <div>
-                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">${advisor.role} - ${advisor.name}</div>
-                            <div class="text-sm text-gray-200 italic">"${advInfo.text}"</div>
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">${advisor.role[currentLang]} - ${advisor.name}</div>
+                            <div class="text-sm text-gray-200 italic">"${advInfo.text[currentLang]}"</div>
                         </div>
                     </div>
                 `;
@@ -595,14 +822,10 @@
             choices.forEach((choice, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'glass-btn w-full text-left p-4 text-sm md:text-base font-semibold text-white relative flex justify-between items-center group opacity-0';
-                btn.style.animation = `fadeIn 0.5s ease forwards ${(index * 150) + 600}ms`;
-                
-                // Construct effects preview (Unknown completely, or vague hint? Prompt asks to calculate consequences. Let's make it a blind choice for more tension, as "Shadow Council")
-                // Wait, prompt says: "Foydalanuvchi bir nechta strategik variantdan birini tanlaydi... AI tanlovning oqibatlarini hisoblaydi." 
-                // Let's show only the text to make it unpredictable.
+                btn.style.animation = `fadeIn 0.5s ease forwards ${(index * 150) + 300}ms`;
                 
                 btn.innerHTML = `
-                    <span>${choice.text}</span>
+                    <span>${choice.text[currentLang]}</span>
                     <i class="fa-solid fa-microchip text-gray-500 group-hover:text-cyan-400 transition-colors"></i>
                 `;
                 
@@ -618,7 +841,6 @@
             Object.keys(effects).forEach(key => {
                 if(METRICS[key]) {
                     METRICS[key].value += effects[key];
-                    // Clamp values between 0 and 100
                     if(METRICS[key].value > 100) METRICS[key].value = 100;
                     if(METRICS[key].value < 0) METRICS[key].value = 0;
                 }
@@ -627,11 +849,11 @@
             renderMetrics();
             updateChart();
             
-            // Visual feedback on screen
+            // Visual glitch feedback
             document.getElementById('canvas-container').style.filter = "contrast(1.5) hue-rotate(90deg)";
             setTimeout(() => { document.getElementById('canvas-container').style.filter = "none"; }, 300);
 
-            // Check Defeat condition
+            // Check Defeat (any metric <= 10)
             let failedMetric = null;
             Object.values(METRICS).forEach(m => {
                 if(m.value <= 10) failedMetric = m;
@@ -647,21 +869,20 @@
 
         function endGame(isVictory, failedMetric = null) {
             gameActive = false;
+            endState = { isVictory, failedMetric };
+            
             document.getElementById('game-ui').style.display = 'none';
             document.getElementById('end-screen').style.display = 'flex';
 
-            const title = document.getElementById('end-title');
-            const icon = document.getElementById('end-icon');
-            const reason = document.getElementById('end-reason');
-            const achieveList = document.getElementById('achievements-list');
-            const scoreEl = document.getElementById('final-score');
+            renderEndScreen(isVictory, failedMetric);
 
             // Calculate overall score
             let total = 0;
             Object.values(METRICS).forEach(m => total += m.value);
             let finalScore = Math.floor(total / 8);
 
-            // Animate Score
+            // Animate Score once
+            const scoreEl = document.getElementById('final-score');
             let currentScore = 0;
             const scoreInterval = setInterval(() => {
                 currentScore += 2;
@@ -671,50 +892,65 @@
                 }
                 scoreEl.innerText = currentScore;
             }, 30);
+        }
+
+        function renderEndScreen(isVictory, failedMetric) {
+            const t = I18N[currentLang];
+            const title = document.getElementById('end-title');
+            const icon = document.getElementById('end-icon');
+            const reason = document.getElementById('end-reason');
+            const achieveList = document.getElementById('achievements-list');
+            const scoreEl = document.getElementById('final-score');
+
+            document.getElementById('end-subtitle').innerText = t.endCalc;
 
             achieveList.innerHTML = '';
             reason.innerHTML = '';
 
             if(!isVictory) {
-                title.innerText = "TIZIM QULADI";
+                title.innerText = t.defeatTitle;
                 title.classList.add('text-red-500');
                 title.classList.remove('text-cyan-400');
                 icon.className = "fa-solid fa-skull text-6xl text-red-500 mb-4 animate-pulse";
                 
-                reason.innerHTML = `<strong>Kritik nosozlik:</strong> ${failedMetric.name} indeksi kritik chegaradan pastga tushdi (${failedMetric.value}%).<br> 
-                Jamiyat bu bosimga dosh bera olmadi va inqiroz global miqyosda nazoratdan chiqdi. Tizim qayta yuklanishi shart.`;
+                let failureReason = t.defeatSubtitleTemplate
+                    .replace('{metric}', failedMetric.name[currentLang])
+                    .replace('{val}', Math.round(failedMetric.value));
+                
+                reason.innerHTML = `<strong>!</strong> ${failureReason}`;
                 
                 scoreEl.classList.remove('text-cyan-400');
                 scoreEl.classList.add('text-red-500');
             } else {
-                title.innerText = "BARQARORLIK SAQLANDI";
+                title.innerText = t.victoryTitle;
                 title.classList.add('text-cyan-400');
+                title.classList.remove('text-red-500');
                 icon.className = "fa-solid fa-globe text-6xl text-cyan-400 mb-4";
                 
-                reason.innerHTML = "Siz beshta global inqirozni muvaffaqiyatli boshqardingiz. Har bir qarorning bahosi bo'lsa-da, dunyo to'liq qulashdan saqlab qolindi.";
+                reason.innerHTML = t.victorySubtitle;
+                
+                scoreEl.classList.remove('text-red-500');
+                scoreEl.classList.add('text-cyan-400');
             }
 
             // Generate Achievements based on high metrics
             let achievements = [];
-            if(METRICS.economy.value >= 70) achievements.push("🏅 Iqtisodiyot Ustasi: Moliyaviy barqarorlik ta'minlandi.");
-            if(METRICS.diplomacy.value >= 70) achievements.push("🏅 Diplomatiya Chempioni: Hamkorlik kuchaytirildi.");
-            if(METRICS.science.value >= 70) achievements.push("🏅 Innovatsiya Yetakchisi: Ilm-fanga katta hissa.");
-            if(METRICS.ecology.value >= 70) achievements.push("🏅 Yashil Dunyo: Ekologik muvozanat saqlandi.");
+            if(METRICS.economy.value >= 70) achievements.push(t.achievEcon);
+            if(METRICS.diplomacy.value >= 70) achievements.push(t.achievDip);
+            if(METRICS.science.value >= 70) achievements.push(t.achievSci);
+            if(METRICS.ecology.value >= 70) achievements.push(t.achievEco);
             
-            // Balance achievement
             const values = Object.values(METRICS).map(m => m.value);
             const min = Math.min(...values);
             const max = Math.max(...values);
-            if(max - min <= 30 && isVictory) achievements.push("⚖️ Muvozanat Me'mori: Barcha sohalar teng ushlab turildi.");
+            if(max - min <= 30 && isVictory) achievements.push(t.achievBal);
 
-            if(achievements.length === 0) achievements.push("Hech qanday maxsus yutuq olinmadi. Faqatgina tirik qolindi.");
+            if(achievements.length === 0) achievements.push(t.achievEmpty);
 
             achievements.forEach(ach => {
                 achieveList.insertAdjacentHTML('beforeend', `<li>${ach}</li>`);
             });
         }
-
-        document.getElementById('btn-start').addEventListener('click', initGame);
 
         // Add custom keyframe for JS injections
         const style = document.createElement('style');
@@ -726,9 +962,6 @@
         `;
         document.head.appendChild(style);
 
-        // ----------------------------------------------------
-        // THREE.JS BACKGROUND
-        // ----------------------------------------------------
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x06070D, 0.001);
 
@@ -748,17 +981,17 @@
             opacity: 0.1 
         });
         const sphere = new THREE.Mesh(geometry, material);
-        sphere.position.x = 8; // Offset to the right
+        sphere.position.x = window.innerWidth > 1024 ? 8 : 0; 
         scene.add(sphere);
 
         // Inner solid core
         const coreGeo = new THREE.IcosahedronGeometry(9.8, 2);
         const coreMat = new THREE.MeshBasicMaterial({ color: 0x0A1325 });
         const core = new THREE.Mesh(coreGeo, coreMat);
-        core.position.x = 8;
+        core.position.x = window.innerWidth > 1024 ? 8 : 0;
         scene.add(core);
 
-        // Particles / Data Nodes
+        // Particles
         const particlesGeometry = new THREE.BufferGeometry();
         const particlesCount = 1500;
         const posArray = new Float32Array(particlesCount * 3);
@@ -789,7 +1022,6 @@
             mouseY = event.clientY / window.innerHeight - 0.5;
         });
 
-        // Animation Loop
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
@@ -801,7 +1033,6 @@
             
             particlesMesh.rotation.y = -elapsedTime * 0.05;
             
-            // Subtle camera movement based on mouse
             camera.position.x += (mouseX * 5 - camera.position.x) * 0.05;
             camera.position.y += (-mouseY * 5 - camera.position.y) * 0.05;
             camera.lookAt(scene.position);
@@ -809,14 +1040,19 @@
             renderer.render(scene, camera);
         }
 
-        // Handle Resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Adjust sphere position on mobile vs desktop
+            const offset = window.innerWidth > 1024 ? 8 : 0;
+            sphere.position.x = offset;
+            core.position.x = offset;
         });
 
-        // Start 3D Loop immediately
+        // Initialize static texts on load
+        updateStaticTexts();
         animate();
 
     </script>
